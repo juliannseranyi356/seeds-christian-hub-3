@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seeds Christian Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--cream:#FAF6EF;--beige:#F0E8D8;--tan:#D9C9A8;--brown-light:#C4A882;--brown:#8B6B4A;--brown-dark:#5C3D1E;--espresso:#2E1A0E;--white:#FFFFFF;--gold:#C9922A;--gold-light:#E8C06A;--green:#4A7C59;--green-light:#7AAD8A;--purple-soft:#C5B8D4;--purple:#8B7BA8;--red-soft:#D98080;--shadow:rgba(92,61,30,0.15);--shadow-deep:rgba(46,26,14,0.25);--glass:rgba(250,246,239,0.88)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Lato',sans-serif;background:var(--cream);color:var(--espresso);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh}.screen.active{display:flex;flex-direction:column}
+#loadingScreen{background:linear-gradient(160deg,var(--brown-dark),var(--espresso));align-items:center;justify-content:center}
+.loading-seed{width:80px;height:80px;background:linear-gradient(135deg,var(--purple-soft),var(--purple));border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 20px;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.8}}
+.loading-text{font-family:'Playfair Display',serif;font-size:22px;color:var(--white);text-align:center;margin-bottom:8px}
+.loading-sub{font-size:13px;color:var(--gold-light);text-align:center;letter-spacing:1px}
+#authScreen{background:linear-gradient(160deg,var(--brown-dark) 0%,var(--espresso) 50%,#1a0f06 100%);align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden}
+#authScreen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(201,146,42,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(139,107,74,.2) 0%,transparent 60%)}
+#authScreen::after{content:'✦  ✦  ✦';position:absolute;top:40px;left:50%;transform:translateX(-50%);color:rgba(201,146,42,.3);font-size:18px;letter-spacing:12px}
+.auth-card{background:var(--glass);backdrop-filter:blur(20px);border:1px solid rgba(201,146,42,.3);border-radius:28px;padding:40px 36px;width:100%;max-width:400px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.6);animation:slideUp .6s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo .seed-icon{width:72px;height:72px;background:linear-gradient(135deg,var(--purple-soft),var(--purple));border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:32px;box-shadow:0 8px 24px rgba(139,123,168,.4)}
+.auth-logo h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--espresso)}
+.auth-logo p{font-size:12px;color:var(--brown);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.auth-tabs{display:flex;gap:8px;background:var(--beige);padding:4px;border-radius:12px;margin-bottom:24px}
+.auth-tab{flex:1;padding:10px;border:none;background:transparent;border-radius:9px;cursor:pointer;font-family:'Lato',sans-serif;font-size:14px;font-weight:700;color:var(--brown);transition:all .2s}
+.auth-tab.active{background:var(--white);color:var(--brown-dark);box-shadow:0 2px 8px var(--shadow)}
+.auth-form{display:flex;flex-direction:column;gap:14px}
+.auth-input{padding:13px 16px;border:1.5px solid var(--tan);border-radius:12px;font-family:'Lato',sans-serif;font-size:14px;background:var(--white);color:var(--espresso);transition:border-color .2s,box-shadow .2s;outline:none}
+.auth-input:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(139,107,74,.15)}
+.auth-btn{padding:14px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));color:var(--cream);border:none;border-radius:12px;font-family:'Lato',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;margin-top:4px}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-deep)}.auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.auth-divider{text-align:center;color:var(--brown-light);font-size:12px;margin:4px 0}
+.auth-guest{background:transparent;border:1.5px solid var(--tan);color:var(--brown-dark)}.auth-guest:hover{background:var(--beige);box-shadow:none}
+.auth-error{background:rgba(217,128,128,.15);border:1px solid rgba(217,128,128,.4);border-radius:10px;padding:10px 14px;font-size:13px;color:#b44;display:none}.auth-error.show{display:block}
+.topbar{background:var(--white);border-bottom:1px solid var(--beige);padding:0 16px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px var(--shadow)}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--espresso);cursor:pointer}
+.topbar-logo .mini-seed{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-soft),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.topbar-icon-btn{width:38px;height:38px;border:none;background:var(--beige);border-radius:10px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--brown-dark)}.topbar-icon-btn:hover{background:var(--tan)}
+.avatar-btn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--brown-light),var(--brown));color:var(--white);font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;border:none}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--beige);display:flex;height:64px;z-index:100;box-shadow:0 -4px 20px var(--shadow)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;cursor:pointer;font-size:10px;font-family:'Lato',sans-serif;color:var(--brown-light);font-weight:700;letter-spacing:.3px;transition:color .2s;padding:6px 0}
+.nav-item .nav-icon{font-size:20px;transition:transform .2s}.nav-item.active{color:var(--brown-dark)}.nav-item.active .nav-icon{transform:scale(1.15)}
+.main-content{flex:1;overflow-y:auto;padding-bottom:80px;background:var(--cream)}
+.tab-content{display:none}.tab-content.active{display:block}
+.home-hero{background:linear-gradient(160deg,var(--brown-dark) 0%,var(--brown) 100%);padding:28px 20px 36px;position:relative;overflow:hidden}
+.home-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(201,146,42,.25),transparent 70%)}
+.hero-greet{font-size:13px;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.hero-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--white);line-height:1.2;margin-bottom:20px}
+.hero-title span{color:var(--gold-light);font-style:italic}
+.devotional-card{background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);border-radius:18px;padding:18px}
+.dev-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}.dev-label::before{content:'✦'}
+.dev-verse{font-family:'Dancing Script',cursive;font-size:17px;color:var(--white);line-height:1.5;margin-bottom:8px}
+.dev-ref{font-size:12px;color:var(--gold-light);font-weight:700;letter-spacing:1px}
+.dev-reflection{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);font-size:12px;color:rgba(255,255,255,.75);line-height:1.6}
+.search-section{padding:20px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.search-bar{display:flex;align-items:center;background:var(--white);border:1.5px solid var(--tan);border-radius:14px;padding:10px 14px;gap:10px;box-shadow:0 2px 8px var(--shadow)}
+.search-bar input{flex:1;border:none;outline:none;font-family:'Lato',sans-serif;font-size:14px;color:var(--espresso);background:transparent}
+.search-bar input::placeholder{color:var(--brown-light)}.search-icon{color:var(--brown-light);font-size:18px}
+.section-label{padding:0 16px 12px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brown);font-weight:700}
+.content-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px 20px}
+.content-btn{background:var(--white);border:1.5px solid var(--beige);border-radius:16px;padding:14px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 2px 8px var(--shadow)}
+.content-btn:hover,.content-btn.active{background:var(--brown-dark);border-color:var(--brown-dark);transform:translateY(-2px);box-shadow:0 6px 18px var(--shadow-deep)}
+.content-btn:hover .cb-icon,.content-btn.active .cb-icon{filter:invert(1)}.content-btn:hover .cb-label,.content-btn.active .cb-label{color:var(--cream)}
+.cb-icon{font-size:24px;transition:all .2s}.cb-label{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--brown-dark);text-align:center;transition:color .2s}
+.h-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 16px 16px;scrollbar-width:none}.h-scroll::-webkit-scrollbar{display:none}
+.mini-card{background:var(--white);border-radius:14px;min-width:130px;overflow:hidden;box-shadow:0 2px 8px var(--shadow);flex-shrink:0;cursor:pointer;transition:transform .2s}.mini-card:hover{transform:translateY(-2px)}
+.mini-thumb{height:90px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.mini-info{padding:8px 10px 10px}.mini-title{font-size:11px;font-weight:700;color:var(--espresso);line-height:1.3}.mini-meta{font-size:10px;color:var(--brown-light);margin-top:2px}
+.feed-section{padding:0 16px}.feed-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.feed-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--espresso)}
+.see-all{font-size:12px;font-weight:700;color:var(--brown);background:var(--beige);padding:5px 10px;border-radius:8px;cursor:pointer;border:none;font-family:'Lato',sans-serif}
+.content-card{background:var(--white);border-radius:18px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 12px var(--shadow);transition:transform .2s,box-shadow .2s}.content-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px var(--shadow-deep)}
+.card-media{width:100%;height:180px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.card-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3)}
+.card-play-btn span{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:3px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.card-body{padding:14px 16px}
+.card-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.tag-video{background:rgba(74,124,89,.15);color:var(--green)}.tag-music{background:rgba(139,123,168,.15);color:var(--purple)}.tag-book{background:rgba(201,146,42,.15);color:var(--gold)}.tag-sermon{background:rgba(139,107,74,.15);color:var(--brown)}.tag-podcast{background:rgba(217,128,128,.15);color:var(--red-soft)}.tag-image{background:rgba(92,61,30,.1);color:var(--brown-dark)}.tag-wallpaper{background:rgba(196,168,130,.2);color:var(--brown)}.tag-infographic{background:rgba(74,124,89,.1);color:var(--green)}
+.card-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:var(--espresso);line-height:1.4;margin-bottom:6px}
+.card-meta{font-size:12px;color:var(--brown-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-actions{padding:10px 16px 14px;display:flex;gap:8px;border-top:1px solid var(--beige);flex-wrap:wrap}
+.action-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:10px;border:none;background:var(--beige);font-family:'Lato',sans-serif;font-size:12px;font-weight:700;color:var(--brown);cursor:pointer;transition:all .2s}.action-btn:hover{background:var(--tan)}
+.action-btn.liked{background:rgba(217,128,128,.2);color:var(--red-soft)}.action-share{margin-left:auto}
+.flag-btn{background:rgba(217,128,128,.1);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--red-soft);cursor:pointer;font-family:'Lato',sans-serif}
+.search-view{padding:16px}
+.search-view-bar{display:flex;align-items:center;gap:10px;background:var(--white);border:2px solid var(--brown);border-radius:14px;padding:12px 16px;margin-bottom:20px;box-shadow:0 2px 12px var(--shadow)}
+.search-view-bar input{flex:1;border:none;outline:none;font-family:'Lato',sans-serif;font-size:15px;color:var(--espresso)}
+.search-view-bar button{background:var(--brown-dark);color:var(--cream);border:none;border-radius:10px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Lato',sans-serif}
+.filter-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;scrollbar-width:none}.filter-chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:7px 14px;border-radius:20px;border:1.5px solid var(--tan);background:var(--white);font-size:12px;font-weight:700;color:var(--brown);cursor:pointer;transition:all .2s;font-family:'Lato',sans-serif}
+.chip.active{background:var(--brown-dark);border-color:var(--brown-dark);color:var(--cream)}
+.yt-card{background:var(--white);border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 10px var(--shadow)}
+.yt-thumb{width:100%;height:160px;display:flex;align-items:center;justify-content:center;font-size:42px;position:relative;overflow:hidden}
+.yt-info{padding:12px 14px}.yt-title{font-weight:700;font-size:14px;color:var(--espresso);margin-bottom:4px;line-height:1.3}.yt-channel{font-size:12px;color:var(--brown-light)}
+.yt-open-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:7px 12px;background:var(--beige);border:none;border-radius:8px;font-size:12px;font-weight:700;color:var(--brown-dark);cursor:pointer;font-family:'Lato',sans-serif;text-decoration:none}
+.search-loader{text-align:center;padding:40px 20px;color:var(--brown);font-size:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--tan);border-top-color:var(--brown);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.upload-view{padding:16px}
+.upload-zone{border:2px dashed var(--tan);border-radius:18px;padding:40px 20px;text-align:center;cursor:pointer;background:var(--white);transition:all .2s;margin-bottom:20px}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--brown);background:var(--beige)}
+.upload-zone .zone-icon{font-size:48px;margin-bottom:12px}.upload-zone h3{font-size:16px;font-weight:700;color:var(--espresso);margin-bottom:6px}.upload-zone p{font-size:13px;color:var(--brown-light)}
+.zone-browse{color:var(--brown);font-weight:700;text-decoration:underline}
+.upload-form{display:flex;flex-direction:column;gap:14px}.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--brown-dark);text-transform:uppercase}
+.form-input,.form-select,.form-textarea{padding:12px 14px;border:1.5px solid var(--tan);border-radius:12px;font-family:'Lato',sans-serif;font-size:14px;color:var(--espresso);background:var(--white);outline:none;transition:border-color .2s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(139,107,74,.1)}
+.form-textarea{resize:vertical;min-height:90px}
+.submit-btn{padding:16px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));color:var(--cream);border:none;border-radius:14px;font-family:'Lato',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px;margin-top:6px}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px var(--shadow-deep)}.submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.preview-thumb{width:100%;height:160px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:4px;overflow:hidden;background:var(--beige)}
+.preview-thumb img{width:100%;height:100%;object-fit:cover;border-radius:14px}
+.upload-progress{background:var(--beige);border-radius:8px;height:8px;margin-top:8px;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--brown),var(--gold));transition:width .3s;border-radius:8px}
+.library-view{padding:16px}
+.view-tabs{display:flex;background:var(--beige);border-radius:12px;padding:4px;gap:4px;margin-bottom:16px}
+.view-tab{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;cursor:pointer;font-weight:700;font-size:12px;color:var(--brown-light);font-family:'Lato',sans-serif;transition:all .2s}
+.view-tab.active{background:var(--white);color:var(--brown-dark);box-shadow:0 2px 6px var(--shadow)}
+.community-view{padding:16px}
+.daily-qa{background:linear-gradient(135deg,var(--green),var(--green-light));border-radius:18px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden}.daily-qa::after{content:'❓';position:absolute;right:16px;bottom:10px;font-size:48px;opacity:.15}
+.qa-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.8);font-weight:700;margin-bottom:6px}
+.qa-question{font-family:'Playfair Display',serif;font-size:17px;color:var(--white);line-height:1.4;margin-bottom:12px}
+.qa-answer-btn{background:rgba(255,255,255,.2);color:var(--white);border:1.5px solid rgba(255,255,255,.4);border-radius:10px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Lato',sans-serif;transition:all .2s}.qa-answer-btn:hover{background:rgba(255,255,255,.3)}
+.section-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--espresso);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.prayer-card{background:var(--white);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px var(--shadow);border-left:4px solid var(--purple)}
+.prayer-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.prayer-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple-soft));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--white);flex-shrink:0}
+.prayer-name{font-weight:700;font-size:13px;color:var(--espresso)}.prayer-time{font-size:11px;color:var(--brown-light)}
+.prayer-text{font-size:13px;color:var(--brown-dark);line-height:1.6;margin-bottom:10px}
+.pray-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;background:rgba(139,123,168,.1);border:none;font-size:12px;font-weight:700;color:var(--purple);cursor:pointer;font-family:'Lato',sans-serif;transition:all .2s}.pray-btn:hover,.pray-btn.prayed{background:var(--purple);color:var(--white)}
+.add-prayer{background:var(--beige);border-radius:16px;padding:16px;margin-bottom:20px}
+.add-prayer textarea{width:100%;border:none;background:transparent;font-family:'Lato',sans-serif;font-size:14px;color:var(--espresso);resize:none;outline:none;height:70px;margin-bottom:10px}
+.add-prayer-btn{background:var(--purple);color:var(--white);border:none;border-radius:10px;padding:9px 20px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Lato',sans-serif}
+.comment-box{background:var(--white);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px var(--shadow)}
+.comment-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--brown-light),var(--brown));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--white);flex-shrink:0}
+.feedback-stars{display:flex;gap:8px;margin-bottom:12px}.star-btn{font-size:24px;background:none;border:none;cursor:pointer;opacity:.3;transition:opacity .2s,transform .15s}.star-btn.active{opacity:1;transform:scale(1.1)}
+.feedback-textarea{width:100%;border:1.5px solid var(--tan);border-radius:12px;padding:12px 14px;font-family:'Lato',sans-serif;font-size:14px;color:var(--espresso);resize:none;outline:none;min-height:80px;margin-bottom:12px}.feedback-textarea:focus{border-color:var(--brown)}
+.feedback-submit{background:linear-gradient(135deg,var(--brown-dark),var(--brown));color:var(--cream);border:none;border-radius:12px;padding:12px 24px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Lato',sans-serif;width:100%}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:24px 20px 40px;animation:slideModal .3s ease;max-height:85vh;overflow-y:auto}
+@keyframes slideModal{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:var(--tan);margin:0 auto 20px}
+.modal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--espresso);margin-bottom:16px}
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.admin-stat{background:var(--beige);border-radius:14px;padding:14px 10px;text-align:center}
+.admin-stat-num{font-weight:700;font-size:22px;color:var(--brown-dark);font-family:'Playfair Display',serif}
+.admin-stat-label{font-size:10px;color:var(--brown-light);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.feedback-card{background:var(--white);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px var(--shadow);border-left:4px solid var(--gold)}
+.rating-stars{color:var(--gold);font-size:14px;margin-top:4px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--espresso);color:var(--cream);padding:12px 24px;border-radius:30px;font-size:13px;font-weight:700;z-index:300;opacity:0;transition:opacity .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3);pointer-events:none}.toast.show{opacity:1}
+.empty-state{text-align:center;padding:40px 20px;color:var(--brown-light)}.empty-state .empty-icon{font-size:48px;margin-bottom:12px}.empty-state p{font-size:14px;line-height:1.6}
+.follow-btn{background:var(--brown-dark);color:var(--cream);border:none;border-radius:12px;padding:9px 22px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Lato',sans-serif;transition:all .2s}.follow-btn.following{background:var(--beige);color:var(--brown-dark);border:1.5px solid var(--tan)}
+@media(max-width:360px){.content-grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="screen active">
+  <div class="loading-seed">🌱</div>
+  <div class="loading-text">Seeds Christian Hub</div>
+  <div class="loading-sub">Loading your faith community…</div>
+</div>
+
+<div id="authScreen" class="screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="seed-icon">🌱</div>
+      <h1>Seeds</h1>
+      <p>Christian Hub</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login',this)">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup',this)">Sign Up</button>
+    </div>
+    <div id="loginForm" class="auth-form">
+      <div class="auth-error" id="loginError"></div>
+      <input class="auth-input" type="email" placeholder="Email address" id="loginEmail">
+      <input class="auth-input" type="password" placeholder="Password" id="loginPw" onkeypress="if(event.key==='Enter')doLogin()">
+      <button class="auth-btn" onclick="doLogin()" id="loginBtn">Sign In →</button>
+      <div class="auth-divider">— or —</div>
+      <button class="auth-btn auth-guest" onclick="doGuest()">Continue as Guest 🌿</button>
+    </div>
+    <div id="signupForm" class="auth-form" style="display:none">
+      <div class="auth-error" id="signupError"></div>
+      <input class="auth-input" type="text" placeholder="Full name" id="signupName">
+      <input class="auth-input" type="email" placeholder="Email address" id="signupEmail">
+      <input class="auth-input" type="password" placeholder="Create password (min 6 chars)" id="signupPw">
+      <input class="auth-input" type="text" placeholder="Country" id="signupCountry">
+      <button class="auth-btn" onclick="doSignup()" id="signupBtn">Create Account →</button>
+    </div>
+  </div>
+</div>
+
+<div id="mainApp" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo" onclick="showTab('home')"><div class="mini-seed">🌱</div>Seeds</div>
+    <div class="topbar-actions">
+      <button class="topbar-icon-btn" onclick="showTab('search')">🔍</button>
+      <button class="topbar-icon-btn" onclick="showFeedbackModal()">💬</button>
+      <button class="avatar-btn" id="avatarBtn" onclick="showProfileModal()">?</button>
+    </div>
+  </div>
+  <div class="main-content">
+
+    <div id="tab-home" class="tab-content active">
+      <div class="home-hero">
+        <div class="hero-greet">Good day, <span id="greetName">friend</span> 🙏</div>
+        <div class="hero-title">Grow in <span>faith</span>,<br>one seed at a time.</div>
+        <div class="devotional-card">
+          <div class="dev-label">Devotional of the Day</div>
+          <div class="dev-verse" id="devVerse">"Trust in the Lord with all your heart."</div>
+          <div class="dev-ref" id="devRef">— Proverbs 3:5</div>
+          <div class="dev-reflection" id="devReflection">Today, surrender your worries to God.</div>
+        </div>
+      </div>
+      <div class="search-section">
+        <div class="search-bar"><span class="search-icon">🏷️</span><input type="text" placeholder="Filter by type (videos, music, sermons…)" oninput="filterByType(this.value)"></div>
+        <div class="search-bar"><span class="search-icon">🔍</span><input type="text" placeholder="Search content, topic, creator…" oninput="filterContent(this.value)"></div>
+      </div>
+      <div class="section-label">Browse Categories</div>
+      <div class="content-grid">
+        <button class="content-btn" onclick="filterFeed('video');highlightBtn(this)"><span class="cb-icon">🎬</span><span class="cb-label">Videos</span></button>
+        <button class="content-btn" onclick="filterFeed('music');highlightBtn(this)"><span class="cb-icon">🎵</span><span class="cb-label">Music</span></button>
+        <button class="content-btn" onclick="filterFeed('book');highlightBtn(this)"><span class="cb-icon">📖</span><span class="cb-label">Books</span></button>
+        <button class="content-btn" onclick="filterFeed('sermon');highlightBtn(this)"><span class="cb-icon">🎙️</span><span class="cb-label">Sermons</span></button>
+        <button class="content-btn" onclick="filterFeed('podcast');highlightBtn(this)"><span class="cb-icon">🎧</span><span class="cb-label">Podcasts</span></button>
+        <button class="content-btn" onclick="filterFeed('image');highlightBtn(this)"><span class="cb-icon">🖼️</span><span class="cb-label">Images</span></button>
+        <button class="content-btn" onclick="filterFeed('wallpaper');highlightBtn(this)"><span class="cb-icon">🌅</span><span class="cb-label">Wallpapers</span></button>
+        <button class="content-btn active" onclick="filterFeed('all');highlightBtn(this)"><span class="cb-icon">✨</span><span class="cb-label">All</span></button>
+      </div>
+      <div class="section-label" style="padding-top:0">Recent Uploads</div>
+      <div class="h-scroll" id="recentCards"></div>
+      <div class="feed-section">
+        <div class="feed-header"><div class="feed-title">Latest Uploads</div><button class="see-all" onclick="showTab('search')">See All</button></div>
+        <div id="contentFeed"><div class="search-loader"><div class="spinner"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <div id="tab-search" class="tab-content">
+      <div class="search-view">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--espresso);margin-bottom:4px;">Discover</div>
+        <div style="font-size:13px;color:var(--brown-light);margin-bottom:16px;">Search all community uploads</div>
+        <div class="search-view-bar">
+          <input type="text" id="discoverInput" placeholder="e.g. Holy Spirit, faith, worship…" onkeypress="if(event.key==='Enter')doDiscover()">
+          <button onclick="doDiscover()">Search</button>
+        </div>
+        <div class="filter-chips">
+          <button class="chip active" onclick="selectChip(this,'all')">All</button>
+          <button class="chip" onclick="selectChip(this,'video')">Videos</button>
+          <button class="chip" onclick="selectChip(this,'music')">Music</button>
+          <button class="chip" onclick="selectChip(this,'sermon')">Sermons</button>
+          <button class="chip" onclick="selectChip(this,'book')">Books</button>
+          <button class="chip" onclick="selectChip(this,'podcast')">Podcasts</button>
+          <button class="chip" onclick="selectChip(this,'image')">Images</button>
+          <button class="chip" onclick="selectChip(this,'wallpaper')">Wallpapers</button>
+        </div>
+        <div id="discoverResults"><div class="search-loader"><div class="spinner"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <div id="tab-upload" class="tab-content">
+      <div class="upload-view">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--espresso);margin-bottom:4px;">Share Content</div>
+        <div style="font-size:13px;color:var(--brown-light);margin-bottom:24px;">Inspire Christians worldwide 🌍</div>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+          <div class="zone-icon">📤</div><h3>Tap to choose a file</h3>
+          <p>Videos, music, images, PDFs…<br><span class="zone-browse">Browse files</span></p>
+          <input type="file" id="fileInput" style="display:none" accept="image/*,video/*,audio/*,.pdf,.epub" onchange="handleFileSelect(event)">
+        </div>
+        <div id="previewArea" style="display:none;margin-bottom:16px;">
+          <div class="preview-thumb" id="previewThumb">📄</div>
+          <div style="font-size:12px;color:var(--brown-light);text-align:center;margin-top:4px;" id="fileName"></div>
+          <div class="upload-progress" id="uploadProgress"><div class="upload-progress-bar" id="uploadProgressBar" style="width:0%"></div></div>
+        </div>
+        <div class="upload-form">
+          <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="upTitle" placeholder="e.g. Faith Over Fear — Sunday Sermon"></div>
+          <div class="form-group"><label class="form-label">Content Type *</label>
+            <select class="form-select" id="upType">
+              <option value="">Select type…</option>
+              <option value="video">Video</option><option value="music">Music / Worship Song</option>
+              <option value="sermon">Sermon</option><option value="podcast">Podcast</option>
+              <option value="book">Book / PDF</option><option value="image">Image</option>
+              <option value="wallpaper">Wallpaper</option><option value="infographic">Infographic</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Video / Audio Link</label><input class="form-input" id="upLink" placeholder="Paste YouTube, Spotify, SoundCloud link… (for videos &amp; music)"></div>
+          <div class="form-group"><label class="form-label">Topic / Niche</label><input class="form-input" id="upTopic" placeholder="e.g. Gifts of the Holy Spirit, Prayer…"></div>
+          <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="upDesc" placeholder="Share a brief description or Scripture reference…"></textarea></div>
+          <div class="form-group"><label class="form-label">Creator / Ministry Name</label><input class="form-input" id="upCreator" placeholder="Your name or ministry"></div>
+          <button class="submit-btn" onclick="submitUpload()" id="uploadBtn">Upload &amp; Share 🌱</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-library" class="tab-content">
+      <div class="library-view">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--espresso);margin-bottom:4px;">My Library</div>
+        <div style="font-size:13px;color:var(--brown-light);margin-bottom:16px;">Your saved &amp; liked content</div>
+        <div class="view-tabs">
+          <button class="view-tab active" onclick="switchLibTab('liked',this)">❤️ Liked</button>
+          <button class="view-tab" onclick="switchLibTab('uploads',this)">📤 My Posts</button>
+          <button class="view-tab" onclick="switchLibTab('creators',this)">👤 Following</button>
+        </div>
+        <div id="likedContent"><div class="search-loader"><div class="spinner"></div></div></div>
+        <div id="uploadsContent" style="display:none"></div>
+        <div id="creatorsContent" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="tab-community" class="tab-content">
+      <div class="community-view">
+        <div class="view-tabs">
+          <button class="view-tab active" onclick="switchComTab('qa',this)">📋 Daily Q&amp;A</button>
+          <button class="view-tab" onclick="switchComTab('prayer',this)">🙏 Prayer Wall</button>
+        </div>
+        <div id="qaTab">
+          <div class="daily-qa">
+            <div class="qa-label">Today's Question</div>
+            <div class="qa-question" id="dailyQText">What does it mean to walk by faith and not by sight?</div>
+            <button class="qa-answer-btn" onclick="openAnswerModal()">✍️ Share Your Answer</button>
+          </div>
+          <div class="section-title">💬 Community Answers</div>
+          <div id="answersSection"><div class="search-loader"><div class="spinner"></div></div></div>
+        </div>
+        <div id="prayerTab" style="display:none">
+          <div class="section-title">🙏 Prayer Wall</div>
+          <div class="add-prayer">
+            <textarea id="prayerInput" placeholder="Share your prayer request… The community will pray with you. 💜"></textarea>
+            <button class="add-prayer-btn" onclick="submitPrayer()">Post Prayer Request</button>
+          </div>
+          <div id="prayerList"><div class="search-loader"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="showTab('home')"><span class="nav-icon">🏠</span>Home</button>
+    <button class="nav-item" id="nav-search" onclick="showTab('search')"><span class="nav-icon">🔍</span>Discover</button>
+    <button class="nav-item" id="nav-upload" onclick="showTab('upload')"><span class="nav-icon">➕</span>Upload</button>
+    <button class="nav-item" id="nav-library" onclick="showTab('library')"><span class="nav-icon">📚</span>Library</button>
+    <button class="nav-item" id="nav-community" onclick="showTab('community')"><span class="nav-icon">🌿</span>Community</button>
+  </nav>
+</div>
+
+<div class="modal-overlay" id="answerModal">
+  <div class="modal"><div class="modal-handle"></div><div class="modal-title">Share Your Answer</div>
+    <div style="font-size:13px;color:var(--brown-light);margin-bottom:14px;" id="modalQText"></div>
+    <textarea class="form-textarea" id="answerInput" placeholder="Write your answer…" style="width:100%;margin-bottom:14px;"></textarea>
+    <button class="submit-btn" onclick="submitAnswer()" style="width:100%">Post Answer 🙏</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="profileModal">
+  <div class="modal"><div class="modal-handle"></div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--brown-light),var(--brown));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:white;margin:0 auto 12px;" id="modalAvatarBig">?</div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;" id="modalName">Friend</div>
+      <div style="font-size:13px;color:var(--brown-light);" id="modalEmail">—</div>
+    </div>
+    <div style="background:var(--beige);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-around;">
+      <div style="text-align:center;"><div style="font-weight:700;font-size:18px;" id="profileUploads">—</div><div style="font-size:11px;color:var(--brown-light);">Uploads</div></div>
+      <div style="text-align:center;"><div style="font-weight:700;font-size:18px;" id="profileLiked">—</div><div style="font-size:11px;color:var(--brown-light);">Liked</div></div>
+      <div style="text-align:center;"><div style="font-weight:700;font-size:18px;" id="profileFollowing">—</div><div style="font-size:11px;color:var(--brown-light);">Following</div></div>
+    </div>
+    <div id="adminPanelBtn" style="display:none;"><button onclick="openAdmin()" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));border:none;border-radius:12px;font-weight:700;font-size:13px;color:var(--cream);cursor:pointer;font-family:'Lato',sans-serif;margin-bottom:10px;">⚙️ Admin Panel</button></div>
+    <button onclick="doLogout()" style="width:100%;padding:12px;background:rgba(217,128,128,.15);border:none;border-radius:12px;font-weight:700;font-size:13px;color:var(--red-soft);cursor:pointer;font-family:'Lato',sans-serif;">Sign Out</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminModal">
+  <div class="modal"><div class="modal-handle"></div><div class="modal-title">⚙️ Admin Panel</div>
+    <div style="font-size:13px;color:var(--brown-light);margin-bottom:16px;">Platform overview — admin eyes only 🔒</div>
+    <div class="admin-stats">
+      <div class="admin-stat"><div class="admin-stat-num" id="adminTotalUsers">—</div><div class="admin-stat-label">Users</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="adminTotalContent">—</div><div class="admin-stat-label">Uploads</div></div>
+      <div class="admin-stat"><div class="admin-stat-num" id="adminTotalFeedback">—</div><div class="admin-stat-label">Feedback</div></div>
+    </div>
+    <div style="font-weight:700;font-size:13px;color:var(--brown-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 User Feedback</div>
+    <div id="adminFeedback"><div class="search-loader"><div class="spinner"></div></div></div>
+    <button onclick="seedSampleContent()" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--green),var(--green-light));border:none;border-radius:12px;font-weight:700;font-size:13px;color:white;cursor:pointer;font-family:'Lato',sans-serif;margin-bottom:10px;">🌱 Seed Sample Content (run once)</button>
+    <button onclick="closeModal('adminModal')" style="margin-top:4px;width:100%;padding:12px;background:var(--beige);border:none;border-radius:12px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;color:var(--brown-dark);">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal"><div class="modal-handle"></div><div class="modal-title">💬 Share Feedback</div>
+    <div style="font-size:13px;color:var(--brown-light);margin-bottom:20px;">How is your Seeds experience? 🌱</div>
+    <div style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:8px;">Rate your experience:</div>
+    <div class="feedback-stars">
+      <button class="star-btn" onclick="setRating(1)">⭐</button><button class="star-btn" onclick="setRating(2)">⭐</button>
+      <button class="star-btn" onclick="setRating(3)">⭐</button><button class="star-btn" onclick="setRating(4)">⭐</button>
+      <button class="star-btn" onclick="setRating(5)">⭐</button>
+    </div>
+    <textarea class="feedback-textarea" id="feedbackText" placeholder="Tell us what you love or what we can improve…"></textarea>
+    <button class="feedback-submit" onclick="submitFeedback()">Submit Feedback 🙏</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="viewModal">
+  <div class="modal"><div class="modal-handle"></div>
+    <div id="viewModalContent"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;">
+      <button id="viewLikeBtn" class="action-btn" style="flex:1;justify-content:center;" onclick="likeFromModal()">🤍 Like</button>
+      <button class="action-btn" style="flex:1;justify-content:center;" onclick="shareFromModal()">🔗 Share</button>
+      <button class="action-btn" onclick="closeModal('viewModal')">✕</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ SUPABASE CONFIG ═══
+const SUPABASE_URL='https://kxeunkjjdtrjzincihff.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4ZXVua2pqZHRyanppbmNpaGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTgyMTksImV4cCI6MjA4OTM3NDIxOX0.SAJByuEtAGY7sYW_UngZfO-etWwkkgmQ_QoQyq-aGkA';
+
+// ═══ ADD YOUR ADMIN EMAIL(S) HERE ═══
+const ADMIN_EMAILS=['juliannseranyi@gmail.com'];
+
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let currentUser=null,currentProfile=null,likedItems=new Set(),selectedFile=null,currentRating=0,currentViewItem=null,searchFilter='all';
+
+const devotionals=[
+  {verse:'"Trust in the Lord with all your heart and lean not on your own understanding."',ref:'Proverbs 3:5',reflection:'Today, surrender your worries to God. His understanding surpasses anything we can imagine. Walk in faith, not fear.'},
+  {verse:'"I can do all things through Christ who strengthens me."',ref:'Philippians 4:13',reflection:"Whatever challenge you face today, you don't face it alone. Christ is your strength, your refuge, your champion."},
+  {verse:'"The Lord is my shepherd; I shall not want."',ref:'Psalm 23:1',reflection:"In every season, God provides. He leads you beside still waters. Today, rest in His provision."},
+  {verse:'"Be still and know that I am God."',ref:'Psalm 46:10',reflection:'In the noise and rush, God calls you to pause. Stillness is not emptiness — it is where His voice is found.'},
+  {verse:'"For God so loved the world that He gave His only Son."',ref:'John 3:16',reflection:'The foundation of our faith is love — extravagant, unconditional, undeserved. You are deeply loved today.'},
+  {verse:'"Come to me, all you who are weary and burdened, and I will give you rest."',ref:'Matthew 11:28',reflection:'You do not have to carry every burden alone. Lay it down at His feet today.'},
+  {verse:'"Your word is a lamp to my feet and a light to my path."',ref:'Psalm 119:105',reflection:'When the road ahead seems unclear, open the Word. His truth guides every step of your journey.'},
+];
+const dailyQuestions=[
+  'What does it mean to "walk by faith and not by sight"? How does this apply to your daily life?',
+  'How do you experience the Holy Spirit in your everyday walk with God?',
+  'What Scripture has impacted your life the most, and why?',
+  'How do you overcome doubt in your Christian journey?',
+  'What does "abiding in Christ" look like for you practically?',
+  'How do you maintain your prayer life when life gets busy?',
+  'What is one thing God has been teaching you this week?',
+];
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  // Timeout so loading screen never freezes
+  const timeout=setTimeout(()=>showScreen('authScreen'),4000);
+  try{
+    const{data:{session}}=await db.auth.getSession();
+    clearTimeout(timeout);
+    if(session?.user){currentUser=session.user;await loadProfile();enterApp();}else showScreen('authScreen');
+  }catch(e){clearTimeout(timeout);showScreen('authScreen');}
+});
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function enterApp(){
+  showScreen('mainApp');
+  const name=currentProfile?.full_name||currentUser?.email||'Friend';
+  const init=name.charAt(0).toUpperCase();
+  document.getElementById('avatarBtn').textContent=init;
+  document.getElementById('modalAvatarBig').textContent=init;
+  document.getElementById('modalName').textContent=name;
+  document.getElementById('modalEmail').textContent=currentUser?.email||'Guest';
+  document.getElementById('greetName').textContent=name.split(' ')[0];
+  const isAdmin=currentUser?.email&&ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(currentUser.email.toLowerCase());
+  document.getElementById('adminPanelBtn').style.display=isAdmin?'block':'none';
+  initDevotional();loadFeed();loadLikedItems();loadDiscover();
+}
+function switchAuthTab(tab,btn){document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');document.getElementById('loginForm').style.display=tab==='login'?'flex':'none';document.getElementById('signupForm').style.display=tab==='signup'?'flex':'none';}
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim(),pw=document.getElementById('loginPw').value;
+  const err=document.getElementById('loginError'),btn=document.getElementById('loginBtn');
+  err.classList.remove('show');if(!email||!pw){showErr(err,'Please fill in all fields.');return;}
+  btn.disabled=true;btn.textContent='Signing in…';
+  try{const{data,error}=await db.auth.signInWithPassword({email,password:pw});if(error)throw error;currentUser=data.user;await loadProfile();enterApp();}
+  catch(e){showErr(err,e.message||'Login failed.');btn.disabled=false;btn.textContent='Sign In →';}
+}
+async function doSignup(){
+  const name=document.getElementById('signupName').value.trim(),email=document.getElementById('signupEmail').value.trim(),pw=document.getElementById('signupPw').value,country=document.getElementById('signupCountry').value.trim();
+  const err=document.getElementById('signupError'),btn=document.getElementById('signupBtn');
+  err.classList.remove('show');if(!name||!email||!pw){showErr(err,'Please fill in all required fields.');return;}if(pw.length<6){showErr(err,'Password must be at least 6 characters.');return;}
+  btn.disabled=true;btn.textContent='Creating account…';
+  try{const{data,error}=await db.auth.signUp({email,password:pw,options:{data:{full_name:name,country}}});if(error)throw error;currentUser=data.user;await db.from('profiles').upsert({id:data.user.id,full_name:name,email,country,created_at:new Date().toISOString()});await loadProfile();enterApp();showToast('Welcome to Seeds! 🌱');}
+  catch(e){showErr(err,e.message||'Signup failed.');btn.disabled=false;btn.textContent='Create Account →';}
+}
+function doGuest(){currentUser={id:'guest',email:'guest@seeds.app',isGuest:true};currentProfile={full_name:'Guest'};enterApp();showToast('Welcome, Guest! Sign up to save your activity 🌿');}
+async function doLogout(){closeModal('profileModal');if(!currentUser?.isGuest)await db.auth.signOut();currentUser=null;currentProfile=null;likedItems=new Set();showScreen('authScreen');}
+function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
+
+async function loadProfile(){
+  if(!currentUser||currentUser.isGuest)return;
+  try{const{data}=await db.from('profiles').select('*').eq('id',currentUser.id).single();if(data)currentProfile=data;else{const meta=currentUser.user_metadata||{};const p={id:currentUser.id,full_name:meta.full_name||currentUser.email?.split('@')[0]||'Friend',email:currentUser.email,country:meta.country||'',created_at:new Date().toISOString()};await db.from('profiles').upsert(p);currentProfile=p;}}
+  catch(e){}
+}
+async function updateStats(){
+  if(!currentUser||currentUser.isGuest){['profileUploads','profileLiked','profileFollowing'].forEach(id=>document.getElementById(id).textContent='—');return;}
+  try{const[u,l,f]=await Promise.all([db.from('content').select('id',{count:'exact'}).eq('uploader_id',currentUser.id),db.from('likes').select('id',{count:'exact'}).eq('user_id',currentUser.id),db.from('follows').select('id',{count:'exact'}).eq('follower_id',currentUser.id)]);document.getElementById('profileUploads').textContent=u.count??0;document.getElementById('profileLiked').textContent=l.count??0;document.getElementById('profileFollowing').textContent=f.count??0;}catch(e){}
+}
+
+async function loadFeed(type='all',search=''){
+  const el=document.getElementById('contentFeed');el.innerHTML='<div class="search-loader"><div class="spinner"></div>Loading…</div>';
+  try{let q=db.from('content').select('*,profiles(full_name)').order('created_at',{ascending:false}).limit(20);if(type&&type!=='all')q=q.eq('type',type);if(search)q=q.or(`title.ilike.%${search}%,topic.ilike.%${search}%,description.ilike.%${search}%`);const{data,error}=await q;if(error)throw error;if(!data?.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🌱</div><p>No content yet.<br>Be the first to upload!</p></div>';renderRecentCards([]);return;}el.innerHTML=data.map(buildCard).join('');renderRecentCards(data.slice(0,5));}
+  catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load content.<br>Check your connection.</p></div>';}
+}
+async function loadLikedItems(){if(!currentUser||currentUser.isGuest)return;try{const{data}=await db.from('likes').select('content_id').eq('user_id',currentUser.id);if(data)likedItems=new Set(data.map(r=>r.content_id));}catch(e){}}
+
+function buildCard(item){
+  const isLiked=likedItems.has(item.id),creator=item.profiles?.full_name||item.creator_name||'Anonymous';
+  return `<div class="content-card"><div class="card-media" style="background:${tc(item.type)}" onclick='openViewModal(${JSON.stringify(item)})'><span style="font-size:48px">${te(item.type)}</span><div class="card-play-btn"><span>▶</span></div></div><div class="card-body"><span class="card-tag tag-${item.type}">${item.type||'content'}</span><div class="card-title">${esc(item.title)}</div><div class="card-meta"><span>👤 ${esc(creator)}</span>${item.topic?`<span>· 🏷️ ${esc(item.topic)}</span>`:''}<span>· ${ago(item.created_at)}</span></div></div><div class="card-actions"><button class="action-btn ${isLiked?'liked':''}" id="like-${item.id}" onclick="toggleLike('${item.id}',this)">${isLiked?'❤️':'🤍'} <span id="lc-${item.id}">${item.like_count||0}</span></button><button class="action-btn" onclick='openViewModal(${JSON.stringify(item)})'>💬 Comment</button><button class="action-btn action-share" onclick="shareItem('${esc(item.title)}','${item.id}')">🔗 Share</button><button class="flag-btn" onclick="flagContent('${item.id}')">🚩</button></div></div>`;
+}
+function renderRecentCards(items){const el=document.getElementById('recentCards');if(!items?.length){el.innerHTML='<div style="padding:8px;font-size:13px;color:var(--brown-light);">No uploads yet — be the first!</div>';return;}el.innerHTML=items.map(item=>`<div class="mini-card" onclick='openViewModal(${JSON.stringify(item)})'><div class="mini-thumb" style="background:${tc(item.type)}">${te(item.type)}</div><div class="mini-info"><div class="mini-title">${esc(item.title)}</div><div class="mini-meta">${item.type} · ${ago(item.created_at)}</div></div></div>`).join('');}
+
+async function toggleLike(id,btn){
+  if(currentUser?.isGuest){showToast('Sign up to like content 🌱');return;}
+  const isLiked=likedItems.has(id),countEl=document.getElementById('lc-'+id),count=parseInt(countEl?.textContent||'0');
+  if(isLiked){likedItems.delete(id);btn.classList.remove('liked');btn.innerHTML=`🤍 <span id="lc-${id}">${count-1}</span>`;}
+  else{likedItems.add(id);btn.classList.add('liked');btn.innerHTML=`❤️ <span id="lc-${id}">${count+1}</span>`;showToast('Liked! 🙏');}
+  try{if(isLiked){await db.from('likes').delete().eq('user_id',currentUser.id).eq('content_id',id);await db.from('content').update({like_count:Math.max(0,count-1)}).eq('id',id);}else{await db.from('likes').upsert({user_id:currentUser.id,content_id:id,created_at:new Date().toISOString()});await db.from('content').update({like_count:count+1}).eq('id',id);}}catch(e){}
+}
+
+function openViewModal(item){
+  if(typeof item==='string')item=JSON.parse(item);currentViewItem=item;
+  const creator=item.profiles?.full_name||item.creator_name||'Anonymous';
+  document.getElementById('viewModalContent').innerHTML=`<div style="background:${tc(item.type)};border-radius:16px;height:160px;display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:16px;">${te(item.type)}</div><span class="card-tag tag-${item.type}" style="display:inline-block;margin-bottom:10px;">${item.type}</span><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.3;">${esc(item.title)}</div><div style="font-size:13px;color:var(--brown-light);margin-bottom:12px;">👤 ${esc(creator)}${item.topic?' · 🏷️ '+esc(item.topic):''}  · ${ago(item.created_at)}</div>${item.description?`<div style="font-size:14px;color:var(--brown-dark);line-height:1.6;margin-bottom:16px;padding:12px;background:var(--beige);border-radius:12px;">${esc(item.description)}</div>`:''}${item.file_url?renderMedia(item.file_url,item.type):''}<div style="font-size:12px;font-weight:700;color:var(--brown-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Comments</div><div id="commentsArea"><div class="search-loader" style="padding:12px 0"><div class="spinner"></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><input id="commentInput" class="form-input" placeholder="Write a comment…" style="flex:1;" onkeypress="if(event.key==='Enter')submitComment('${item.id}')"><button onclick="submitComment('${item.id}')" style="background:var(--brown-dark);color:var(--cream);border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">Post</button></div>`;
+  const isLiked=likedItems.has(item.id);document.getElementById('viewLikeBtn').innerHTML=isLiked?'❤️ Liked':'🤍 Like';document.getElementById('viewLikeBtn').className='action-btn'+(isLiked?' liked':'');document.getElementById('viewModal').classList.add('open');loadComments(item.id);
+}
+async function loadComments(cid){try{const{data}=await db.from('comments').select('*,profiles(full_name)').eq('content_id',cid).order('created_at',{ascending:false}).limit(20);const el=document.getElementById('commentsArea');if(!data?.length){el.innerHTML='<div style="font-size:13px;color:var(--brown-light);text-align:center;padding:8px 0;">No comments yet. Be the first! 🙏</div>';return;}el.innerHTML=data.map(c=>`<div class="comment-box" style="margin-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div class="comment-avatar">${(c.profiles?.full_name||'A').charAt(0).toUpperCase()}</div><div><div style="font-weight:700;font-size:13px;">${esc(c.profiles?.full_name||'Anonymous')}</div><div style="font-size:11px;color:var(--brown-light);">${ago(c.created_at)}</div></div></div><div style="font-size:13px;color:var(--brown-dark);line-height:1.5;padding-left:44px;">${esc(c.text)}</div></div>`).join('');}catch(e){}}
+async function submitComment(cid){if(currentUser?.isGuest){showToast('Sign up to comment 🌱');return;}const input=document.getElementById('commentInput'),text=input.value.trim();if(!text){showToast('Write something first!');return;}input.value='';try{await db.from('comments').insert({content_id:cid,user_id:currentUser.id,text,created_at:new Date().toISOString()});loadComments(cid);showToast('Comment posted! 🙏');}catch(e){showToast('Could not post comment');}}
+async function likeFromModal(){if(!currentViewItem)return;const btn=document.getElementById('viewLikeBtn');await toggleLike(currentViewItem.id,btn);const isLiked=likedItems.has(currentViewItem.id);btn.innerHTML=isLiked?'❤️ Liked':'🤍 Like';btn.className='action-btn'+(isLiked?' liked':'');}
+function shareFromModal(){if(currentViewItem)shareItem(currentViewItem.title,currentViewItem.id);}
+
+async function loadDiscover(type='all',search=''){
+  const el=document.getElementById('discoverResults');if(!el)return;el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';
+  try{let q=db.from('content').select('*,profiles(full_name)').order('created_at',{ascending:false}).limit(30);if(type&&type!=='all')q=q.eq('type',type);if(search)q=q.or(`title.ilike.%${search}%,topic.ilike.%${search}%,description.ilike.%${search}%,creator_name.ilike.%${search}%`);const{data,error}=await q;if(error)throw error;if(!data?.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><p>No results found.<br>Try different keywords.</p></div>';return;}el.innerHTML=data.map(item=>{const creator=item.profiles?.full_name||item.creator_name||'Anonymous';return `<div class="yt-card"><div class="yt-thumb" style="background:${tc(item.type)}">${te(item.type)}</div><div class="yt-info"><div class="yt-title">${esc(item.title)}</div><div class="yt-channel">👤 ${esc(creator)} · ${item.type}${item.topic?' · '+esc(item.topic):''}</div><div style="display:flex;gap:8px;align-items:center;margin-top:6px;"><button class="yt-open-btn" onclick='openViewModal(${JSON.stringify(item)})'>▶ View</button><span style="font-size:12px;color:var(--brown-light);">❤️ ${item.like_count||0}</span></div></div></div>`;}).join('');}
+  catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load content.</p></div>';}
+}
+async function doDiscover(){const q=document.getElementById('discoverInput').value.trim();await loadDiscover(searchFilter,q);}
+function selectChip(chip,type){document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));chip.classList.add('active');searchFilter=type;loadDiscover(type,document.getElementById('discoverInput').value.trim());}
+
+function handleFileSelect(e){const f=e.target.files[0];if(f){selectedFile=f;showPreview(f);}}
+function handleDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f){selectedFile=f;showPreview(f);}}
+function showPreview(f){document.getElementById('previewArea').style.display='block';document.getElementById('fileName').textContent=f.name+' ('+(f.size/1024).toFixed(1)+' KB)';const thumb=document.getElementById('previewThumb');if(f.type.startsWith('image')){const r=new FileReader();r.onload=e=>{thumb.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">`};r.readAsDataURL(f);}else thumb.innerHTML=`<span style="font-size:48px;">${f.type.includes('audio')?'🎵':f.type.includes('video')?'🎬':'📄'}</span>`;if(f.type.startsWith('image'))document.getElementById('upType').value='image';if(f.type.startsWith('audio'))document.getElementById('upType').value='music';if(f.type.startsWith('video'))document.getElementById('upType').value='video';if(f.name.endsWith('.pdf'))document.getElementById('upType').value='book';}
+async function submitUpload(){
+  if(currentUser?.isGuest){showToast('Sign up to upload content 🌱');return;}
+  const title=document.getElementById('upTitle').value.trim(),type=document.getElementById('upType').value;
+  if(!title||!type){showToast('Please fill in title and type!');return;}
+  const btn=document.getElementById('uploadBtn');btn.disabled=true;btn.textContent='Uploading… 🌱';let fileUrl=null;
+  try{if(selectedFile){const progress=document.getElementById('uploadProgress'),bar=document.getElementById('uploadProgressBar');progress.style.display='block';bar.style.width='30%';const ext=selectedFile.name.split('.').pop(),path=`uploads/${currentUser.id}/${Date.now()}.${ext}`;const{error:se}=await db.storage.from('seeds-content').upload(path,selectedFile,{upsert:true});if(se)throw se;bar.style.width='70%';const{data:ud}=db.storage.from('seeds-content').getPublicUrl(path);fileUrl=ud.publicUrl;bar.style.width='90%';}
+  const linkUrl=document.getElementById('upLink').value.trim();const finalUrl=fileUrl||linkUrl||null;const{error:ce}=await db.from('content').insert({uploader_id:currentUser.id,title,type,topic:document.getElementById('upTopic').value.trim()||null,description:document.getElementById('upDesc').value.trim()||null,creator_name:document.getElementById('upCreator').value.trim()||currentProfile?.full_name||'Anonymous',file_url:finalUrl,like_count:0,created_at:new Date().toISOString()});if(ce)throw ce;if(selectedFile)document.getElementById('uploadProgressBar').style.width='100%';['upTitle','upTopic','upDesc','upCreator','upLink'].forEach(id=>document.getElementById(id).value='');document.getElementById('upType').value='';document.getElementById('previewArea').style.display='none';document.getElementById('uploadProgress').style.display='none';selectedFile=null;showToast('Uploaded! 🌱 Your content is now live!');loadFeed();setTimeout(()=>showTab('home'),1400);}
+  catch(e){showToast('Upload failed: '+(e.message||'Please try again'));}
+  finally{btn.disabled=false;btn.textContent='Upload & Share 🌱';}
+}
+
+async function loadLikedContent(){const el=document.getElementById('likedContent');el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';if(currentUser?.isGuest){el.innerHTML='<div class="empty-state"><div class="empty-icon">❤️</div><p>Sign up to save liked content.</p></div>';return;}try{const{data}=await db.from('likes').select('content_id,content(*,profiles(full_name))').eq('user_id',currentUser.id).order('created_at',{ascending:false});const items=data?.map(r=>r.content).filter(Boolean)||[];el.innerHTML=items.length?items.map(buildCard).join(''):'<div class="empty-state"><div class="empty-icon">❤️</div><p>No liked content yet.<br>Tap the heart on any post!</p></div>';}catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">❤️</div><p>Could not load liked content.</p></div>';}}
+async function loadMyUploads(){const el=document.getElementById('uploadsContent');el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';if(currentUser?.isGuest){el.innerHTML='<div class="empty-state"><div class="empty-icon">📤</div><p>Sign up to upload.</p></div>';return;}try{const{data}=await db.from('content').select('*,profiles(full_name)').eq('uploader_id',currentUser.id).order('created_at',{ascending:false});el.innerHTML=data?.length?data.map(buildCard).join(''):'<div class="empty-state"><div class="empty-icon">📤</div><p>You haven\'t uploaded yet.</p></div>';}catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">📤</div><p>Could not load uploads.</p></div>';}}
+async function loadFollowing(){const el=document.getElementById('creatorsContent');el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';if(currentUser?.isGuest){el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><p>Sign up to follow creators.</p></div>';return;}try{const{data}=await db.from('follows').select('*,profiles!follows_following_id_fkey(full_name,country)').eq('follower_id',currentUser.id);if(!data?.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><p>Not following anyone yet.</p></div>';return;}el.innerHTML=data.map(f=>`<div class="content-card" style="margin-bottom:12px;"><div class="card-body" style="padding-top:16px;"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple-soft));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:white;">${(f.profiles?.full_name||'?').charAt(0).toUpperCase()}</div><div><div style="font-weight:700;font-size:15px;">${esc(f.profiles?.full_name||'Unknown')}</div><div style="font-size:12px;color:var(--brown-light);">${esc(f.profiles?.country||'Seeds Community')}</div></div></div><button onclick="unfollow('${f.following_id}',this)" class="follow-btn following">✓ Following</button></div></div>`).join('');}catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><p>Could not load following list.</p></div>';}}
+async function unfollow(pid,btn){try{await db.from('follows').delete().eq('follower_id',currentUser.id).eq('following_id',pid);btn.textContent='+ Follow';btn.classList.remove('following');showToast('Unfollowed');}catch(e){}}
+function switchLibTab(tab,btn){document.querySelectorAll('#tab-library .view-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');document.getElementById('likedContent').style.display=tab==='liked'?'block':'none';document.getElementById('uploadsContent').style.display=tab==='uploads'?'block':'none';document.getElementById('creatorsContent').style.display=tab==='creators'?'block':'none';if(tab==='liked')loadLikedContent();if(tab==='uploads')loadMyUploads();if(tab==='creators')loadFollowing();}
+
+function openAnswerModal(){if(currentUser?.isGuest){showToast('Sign up to share your answer 🌱');return;}document.getElementById('answerModal').classList.add('open');}
+async function submitAnswer(){const text=document.getElementById('answerInput').value.trim();if(!text){showToast('Please write an answer first!');return;}const q=document.getElementById('dailyQText').textContent;try{await db.from('answers').insert({user_id:currentUser.id,question:q,text,created_at:new Date().toISOString()});document.getElementById('answerInput').value='';closeModal('answerModal');loadAnswers();showToast('Answer posted! 🙏');}catch(e){showToast('Could not post answer');}}
+async function loadAnswers(){const el=document.getElementById('answersSection');el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';try{const q=document.getElementById('dailyQText').textContent;const{data}=await db.from('answers').select('*,profiles(full_name)').eq('question',q).order('created_at',{ascending:false}).limit(20);if(!data?.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">✍️</div><p>No answers yet. Be the first!</p></div>';return;}el.innerHTML=data.map(a=>`<div class="comment-box"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div class="comment-avatar">${(a.profiles?.full_name||'A').charAt(0).toUpperCase()}</div><div><div style="font-weight:700;font-size:13px;">${esc(a.profiles?.full_name||'Anonymous')}</div><div style="font-size:11px;color:var(--brown-light);">${ago(a.created_at)}</div></div><button class="flag-btn" style="margin-left:auto;" onclick="showToast('Flagged 🙏')">🚩</button></div><div style="font-size:13px;color:var(--brown-dark);line-height:1.6;margin:0 0 10px 46px;">${esc(a.text)}</div><div style="padding-left:46px;"><button class="action-btn" onclick="likeAnswer('${a.id}',this)">🤍 ${a.likes||0}</button></div></div>`).join('');}catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">✍️</div><p>Could not load answers.</p></div>';}}
+async function likeAnswer(id,btn){try{const c=parseInt(btn.textContent.trim().split(' ').pop())||0;await db.from('answers').update({likes:c+1}).eq('id',id);btn.innerHTML=`❤️ ${c+1}`;btn.classList.add('liked');}catch(e){}}
+async function submitPrayer(){const text=document.getElementById('prayerInput').value.trim();if(!text){showToast('Please write your prayer request!');return;}if(currentUser?.isGuest){showToast('Sign up to post prayer requests 🌱');return;}try{await db.from('prayers').insert({user_id:currentUser.id,text,pray_count:0,created_at:new Date().toISOString()});document.getElementById('prayerInput').value='';loadPrayers();showToast('Prayer request posted 🙏 The community will pray with you!');}catch(e){showToast('Could not post prayer request');}}
+async function loadPrayers(){const el=document.getElementById('prayerList');el.innerHTML='<div class="search-loader"><div class="spinner"></div></div>';try{const{data}=await db.from('prayers').select('*,profiles(full_name)').order('created_at',{ascending:false}).limit(30);if(!data?.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>No prayer requests yet.</p></div>';return;}el.innerHTML=data.map(p=>`<div class="prayer-card"><div class="prayer-header"><div class="prayer-avatar">${(p.profiles?.full_name||'A').charAt(0).toUpperCase()}</div><div><div class="prayer-name">${esc(p.profiles?.full_name||'Anonymous')}</div><div class="prayer-time">${ago(p.created_at)}</div></div><button class="flag-btn" onclick="showToast('Flagged 🙏')" style="margin-left:auto;">🚩</button></div><div class="prayer-text">${esc(p.text)}</div><button class="pray-btn" id="pray-${p.id}" onclick="prayFor('${p.id}',this)">🙏 Praying (<span id="pc-${p.id}">${p.pray_count||0}</span>)</button></div>`).join('');}catch(e){el.innerHTML='<div class="empty-state"><div class="empty-icon">🙏</div><p>Could not load prayers.</p></div>';}}
+async function prayFor(id,btn){btn.classList.add('prayed');const el=document.getElementById('pc-'+id),c=parseInt(el?.textContent||'0');el.textContent=c+1;try{await db.from('prayers').update({pray_count:c+1}).eq('id',id);}catch(e){}showToast("You're praying for this 🙏");}
+
+function showFeedbackModal(){document.getElementById('feedbackModal').classList.add('open');}
+function setRating(r){currentRating=r;document.querySelectorAll('.star-btn').forEach((btn,i)=>btn.classList.toggle('active',i<r));}
+async function submitFeedback(){if(!currentRating){showToast('Please select a star rating!');return;}const text=document.getElementById('feedbackText').value.trim();if(!text){showToast('Please write a comment!');return;}const userName=currentProfile?.full_name||currentUser?.email?.split('@')[0]||'Anonymous';try{await db.from('feedback').insert({user_id:currentUser?.isGuest?null:currentUser?.id,user_name:userName,stars:currentRating,text,created_at:new Date().toISOString()});document.getElementById('feedbackText').value='';currentRating=0;document.querySelectorAll('.star-btn').forEach(b=>b.classList.remove('active'));closeModal('feedbackModal');showToast('Thank you for your feedback! 🙏🌱');}catch(e){showToast('Could not submit feedback');}}
+
+function openAdmin(){closeModal('profileModal');document.getElementById('adminModal').classList.add('open');loadAdminData();}
+async function loadAdminData(){try{const[fb,content,profiles]=await Promise.all([db.from('feedback').select('*').order('created_at',{ascending:false}),db.from('content').select('id',{count:'exact'}),db.from('profiles').select('id',{count:'exact'})]);document.getElementById('adminTotalUsers').textContent=profiles.count??'—';document.getElementById('adminTotalContent').textContent=content.count??'—';document.getElementById('adminTotalFeedback').textContent=fb.data?.length??'—';const list=fb.data||[];document.getElementById('adminFeedback').innerHTML=list.length?list.map(f=>`<div class="feedback-card"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:700;font-size:13px;">${esc(f.user_name||'Anonymous')}</div><div style="font-size:11px;color:var(--brown-light);">${ago(f.created_at)}</div></div><div class="rating-stars">${'⭐'.repeat(f.stars||0)}</div><div style="font-size:13px;color:var(--brown-dark);line-height:1.5;margin-top:6px;">${esc(f.text||'')}</div></div>`).join(''):'<div class="empty-state" style="padding:16px 0"><div class="empty-icon">💬</div><p>No feedback yet.</p></div>';}catch(e){document.getElementById('adminFeedback').innerHTML='<div style="color:var(--red-soft);font-size:13px;padding:10px 0;">Could not load admin data. Check RLS policies.</div>';}}
+async function flagContent(cid){if(currentUser?.isGuest){showToast('Sign up to report content');return;}try{await db.from('flags').insert({content_id:cid,user_id:currentUser.id,created_at:new Date().toISOString()});}catch(e){}showToast('Content flagged for review 🙏');}
+
+function showTab(tab){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');const nav=document.getElementById('nav-'+tab);if(nav)nav.classList.add('active');if(tab==='library')loadLikedContent();if(tab==='community'){loadAnswers();loadPrayers();}if(tab==='search')loadDiscover(searchFilter);}
+function switchComTab(tab,btn){document.querySelectorAll('#tab-community .view-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');document.getElementById('qaTab').style.display=tab==='qa'?'block':'none';document.getElementById('prayerTab').style.display=tab==='prayer'?'block':'none';}
+function filterFeed(type){loadFeed(type);}function filterByType(val){loadFeed(val||'all');}function filterContent(val){loadFeed('all',val);}
+function highlightBtn(btn){document.querySelectorAll('.content-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function showProfileModal(){updateStats();document.getElementById('profileModal').classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)closeModal(this.id);}));
+
+function initDevotional(){const d=devotionals[new Date().getDate()%devotionals.length];document.getElementById('devVerse').textContent=d.verse;document.getElementById('devRef').textContent='— '+d.ref;document.getElementById('devReflection').textContent=d.reflection;const q=dailyQuestions[new Date().getDay()%dailyQuestions.length];document.getElementById('dailyQText').textContent=q;document.getElementById('modalQText').textContent=q;}
+
+function te(t){return{video:'🎬',music:'🎵',book:'📖',sermon:'🎙️',podcast:'🎧',image:'🖼️',wallpaper:'🌅',infographic:'📊'}[t]||'📄';}
+function tc(t){return{video:'#4A7C59',music:'#8B7BA8',book:'#C9922A',sermon:'#8B6B4A',podcast:'#D98080',image:'#5C3D1E',wallpaper:'#C4A882',infographic:'#2E8B57'}[t]||'#8B6B4A';}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ago(ts){if(!ts)return'';const d=new Date(ts),now=new Date(),diff=(now-d)/1000;if(diff<60)return'Just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';if(diff<604800)return Math.floor(diff/86400)+'d ago';return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function shareItem(title,id){const url=window.location.href.split('?')[0]+'?content='+id;if(navigator.share)navigator.share({title:'Seeds: '+title,url});else{navigator.clipboard?.writeText(url);showToast('Link copied! Share the blessing 🌱');}}
+let toastTimer;function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ── RENDER MEDIA (YouTube embed or file link) ──
+function renderMedia(url, type) {
+  if (!url) return '';
+  // YouTube embed
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  if (ytMatch) {
+    return `<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:12px;overflow:hidden;margin-bottom:12px;"><iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div>`;
+  }
+  // Spotify embed
+  const spMatch = url.match(/spotify\.com\/(track|album|playlist|episode)\/([\w]+)/);
+  if (spMatch) {
+    return `<iframe src="https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}" width="100%" height="152" style="border-radius:12px;margin-bottom:12px;border:none;" allowfullscreen></iframe>`;
+  }
+  // Image
+  if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    return `<img src="${url}" style="width:100%;border-radius:12px;margin-bottom:12px;max-height:300px;object-fit:cover;">`;
+  }
+  // PDF / audio / other
+  return `<a href="${url}" target="_blank" style="display:block;text-align:center;padding:12px;background:var(--brown-dark);color:var(--cream);border-radius:12px;font-weight:700;text-decoration:none;margin-bottom:12px;">▶ Open / View File</a>`;
+}
+
+// ── SEED SAMPLE CONTENT (run once by admin) ──
+async function seedSampleContent() {
+  const samples = [
+    // VIDEOS
+    {type:'video',title:'The Power of the Holy Spirit — Full Message',creator_name:'Elevation Church',topic:'Holy Spirit',description:'Pastor Steven Furtick teaches on the transforming power of the Holy Spirit in our daily lives.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:142},
+    {type:'video',title:'Walking in Faith When Life is Hard',creator_name:'TD Jakes Ministries',topic:'Faith',description:'A powerful message about trusting God even in the darkest seasons of life.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:289},
+    {type:'video',title:'Understanding the Gifts of the Holy Spirit',creator_name:'Kenneth Copeland',topic:'Gifts of the Spirit',description:'A deep dive into the 9 gifts of the Holy Spirit and how they operate today.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:97},
+    // SERMONS
+    {type:'sermon',title:'Grace That is Greater Than Our Sin',creator_name:'Charles Stanley',topic:'Grace',description:'An anointed teaching on the incomprehensible grace of God towards sinners.',file_url:null,like_count:201},
+    {type:'sermon',title:'The Secret to Answered Prayer',creator_name:'Joyce Meyer Ministries',topic:'Prayer',description:'Joyce Meyer shares practical keys to having a powerful and effective prayer life.',file_url:null,like_count:178},
+    {type:'sermon',title:'Living a Life of Purpose',creator_name:'Rick Warren',topic:'Purpose',description:'From the author of The Purpose Driven Life — discovering why God made you.',file_url:null,like_count:134},
+    // MUSIC
+    {type:'music',title:'Oceans (Where Feet May Fail) — Live',creator_name:'Hillsong Worship',topic:'Worship',description:'One of the most beloved worship songs of our generation. Let it carry you into His presence.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:389},
+    {type:'music',title:'Way Maker — Live Worship',creator_name:'Sinach',topic:'Praise',description:'The global anthem of faith by Nigerian worship leader Sinach.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:412},
+    {type:'music',title:'Goodness of God',creator_name:'Bethel Music',topic:'Worship',description:'A beautiful declaration of God's faithfulness through every season.',file_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',like_count:356},
+    // PODCASTS
+    {type:'podcast',title:'The Bible in a Year — Day 1',creator_name:'Fr. Mike Schmitz',topic:'Bible',description:'Begin your journey through the entire Bible in one year with guided reflections.',file_url:null,like_count:88},
+    {type:'podcast',title:'Christianity Today Podcast — Episode 42',creator_name:'Christianity Today',topic:'Christian Life',description:'Conversations about faith, culture, and what it means to follow Jesus today.',file_url:null,like_count:55},
+    {type:'podcast',title:'Ask NT Wright Anything',creator_name:'NT Wright',topic:'Theology',description:'World-renowned theologian answers your deepest questions about Scripture and faith.',file_url:null,like_count:73},
+    // BOOKS
+    {type:'book',title:'Mere Christianity — C.S. Lewis (Summary)',creator_name:'Seeds Library',topic:'Apologetics',description:'A summary of C.S. Lewis's landmark defence of the Christian faith. One of the greatest books ever written.',file_url:null,like_count:97},
+    {type:'book',title:'The Purpose Driven Life — Key Chapters',creator_name:'Seeds Library',topic:'Purpose',description:'Key insights from Rick Warren's bestselling book on discovering God's purpose for your life.',file_url:null,like_count:112},
+    {type:'book',title:'Intercessory Prayer — Dutch Sheets',creator_name:'Seeds Library',topic:'Prayer',description:'An eye-opening look at the power and privilege of intercessory prayer.',file_url:null,like_count:64},
+    // IMAGES
+    {type:'image',title:'Verse Card: Jeremiah 29:11',creator_name:'Seeds Creatives',topic:'Scripture',description:'"For I know the plans I have for you," declares the LORD. A beautiful Scripture card for your wall.',file_url:null,like_count:156},
+    {type:'image',title:'Scripture Art: Philippians 4:13',creator_name:'Seeds Creatives',topic:'Strength',description:'I can do all things through Christ who strengthens me. Bold typographic art.',file_url:null,like_count:203},
+    {type:'image',title:'The Armour of God — Illustrated',creator_name:'Seeds Creatives',topic:'Spiritual Warfare',description:'A beautiful infographic of the full armour of God from Ephesians 6.',file_url:null,like_count:89},
+    // WALLPAPERS
+    {type:'wallpaper',title:'Be Still and Know — Phone Wallpaper',creator_name:'Seeds Creatives',topic:'Peace',description:'A calming wallpaper featuring Psalm 46:10 with a peaceful nature background.',file_url:null,like_count:178},
+    {type:'wallpaper',title:'His Mercies Are New Every Morning',creator_name:'Seeds Creatives',topic:'Mercy',description:'Lamentations 3:23 — a sunrise wallpaper to start your day with hope.',file_url:null,like_count:145},
+    // INFOGRAPHIC
+    {type:'infographic',title:'The Fruits of the Spirit — Visual Guide',creator_name:'Seeds Creatives',topic:'Holy Spirit',description:'A beautiful visual breakdown of the 9 fruits of the Spirit from Galatians 5:22.',file_url:null,like_count:121},
+    {type:'infographic',title:'How to Read the Bible in 1 Year',creator_name:'Seeds Library',topic:'Bible',description:'A simple, practical reading plan to take you through the entire Bible in 12 months.',file_url:null,like_count:93},
+  ];
+
+  let count = 0;
+  for (const item of samples) {
+    const { error } = await db.from('content').insert({
+      uploader_id: null,
+      title: item.title,
+      type: item.type,
+      topic: item.topic,
+      description: item.description,
+      creator_name: item.creator_name,
+      file_url: item.file_url,
+      like_count: item.like_count,
+      created_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    if (!error) count++;
+  }
+  showToast(`Seeded ${count} content items! 🌱`);
+  loadFeed();
+}
+
+</script>
+</body>
+</html>
